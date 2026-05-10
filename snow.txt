@@ -1,0 +1,212 @@
+# 项目文档：雪落晴天（Snow in Clear Sky）
+
+> 一份让 AI Agent 逐片读取、渐次构建的工程蓝图。  
+> 每个字段都是一片独立的雪花，落在同一个晴天里。
+
+---
+
+### [内陆帝国]  
+**项目核心理念**  
+一个轻量级 Web 交互作品，呈现《告别平原》中“雪落在晴天里”的核心意象。  
+用户通过点击、悬停、收集“至少”雪片，体验从撤退到微弱承诺的渐变。  
+项目不依赖复杂后端，所有数据存储于浏览器本地（localStorage），支持静谧的、非侵入式的叙事循环。
+
+---
+
+### [能说会道]  
+**技术栈（防守型选型，每项都有退路）**  
+- **框架**：React 18 + TypeScript（鲁棒的类型系统，可随时替换为 Preact）  
+- **构建工具**：Vite（快速启动，配置零负担）  
+- **样式**：TailwindCSS + 手写 CSS 关键帧动画（晴天的暖色与雪的冷色并存）  
+- **状态管理**：Zustand（极简，无 boilerplate）  
+- **存储**：localStorage（用户生成的新雪片持久化）  
+- **测试**：Vitest + React Testing Library（确保每片雪花不会无故融化）  
+
+---
+
+### [博学多闻]  
+**目录结构（如平原上的村庄，功能分区清晰）**  
+
+```
+snow-in-clear-sky/
+├── public/
+│   └── favicon.svg          # 一片六角雪花
+├── src/
+│   ├── components/
+│   │   ├── SnowCanvas.tsx   # 雪片渲染与交互层
+│   │   ├── AtLeastCard.tsx  # 点击雪片后弹出的卡片
+│   │   ├── PromiseInput.tsx # 用户提交新承诺的输入区
+│   │   └── SunDial.tsx      # 晴天背景（HSV 动态色温）
+│   ├── store/
+│   │   └── snowStore.ts     # Zustand store（雪片列表、用户承诺）
+│   ├── hooks/
+│   │   ├── useSnowfall.ts   # 雪片生成与动画帧逻辑
+│   │   └── useLocalStorage.ts
+│   ├── types/
+│   │   └── snowflake.ts     # 雪片接口定义
+│   ├── utils/
+│   │   ├── generateSnowflake.ts  # 从文本提取“至少”句式
+│   │   └── fallPhysics.ts        # 简单重力 + 风力扰动
+│   ├── constants/
+│   │   └── phrases.ts       # 来自原文的“至少”列表
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── index.css
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── README.md
+```
+
+---
+
+### [通情达理]  
+**数据模型（每一片雪都有自己的重量）**  
+
+```typescript
+// types/snowflake.ts
+export interface Snowflake {
+  id: string;
+  text: string;           // “至少我还有……” 的具体内容
+  x: number;              // 0~100 百分比横坐标
+  y: number;              // 0~100 百分比纵坐标（动画更新）
+  speed: number;          // 下落速度 px/frame
+  rotation: number;       // 0~360 旋转角
+  clicked: boolean;       // 是否已被用户点击（点击后变成飘浮卡片）
+  isUserAdded: boolean;   // 区分原文雪片与用户自创雪片
+  createdAt: number;      // 用于排序与过期清理（三天后融化）
+}
+```
+
+**Store 接口**  
+
+```typescript
+interface SnowStore {
+  flakes: Snowflake[];
+  addFlake: (text: string, isUserAdded: boolean) => void;
+  removeFlake: (id: string) => void;
+  toggleClick: (id: string) => void;
+  clearOldFlakes: (maxAgeDays: number) => void;
+}
+```
+
+---
+
+### [平心定气]  
+**核心逻辑（小而近的承诺）**  
+
+1. **雪片生成**  
+   - 启动时从 `phrases.ts` 加载 10~15 片原文雪片（如 “至少我还有工作”）。  
+   - 用户每提交一条新承诺（10 字以内），生成一片新雪片，保存到 localStorage。  
+   - 每次生成随机位置 (x) 与下落速度（0.8~2.0）。
+
+2. **动画循环**  
+   - 使用 `requestAnimationFrame` 更新每片雪的 `y` 坐标。  
+   - 触底（y > 95%）时：雪片消失，计数器 –1（不记录遗憾，只是自然融化）。  
+   - 可选：加入微弱横向漂移（sin 函数）。
+
+3. **交互反馈**  
+   - 点击雪片 → `toggleClick` 设为 true → 隐藏雪片，在原本位置弹出 `AtLeastCard` 显示完整文本。  
+   - 卡片可被关闭（重新飘回雪花）或被“承诺”按钮转化：将文本修改为正向行动（如“我会认真吃完这顿饭”），并改变颜色为淡金色。
+
+4. **晴天背景**  
+   - 基于时间 / 点击率动态改变背景色温：点击越多（承诺行动越多），天色越偏暖。  
+   - 纯 CSS 渐变 + SVG 光晕，不使用图片。
+
+---
+
+### [食髓知味]  
+**性能与鲁棒策略（每一片雪都不应卡死）**  
+
+- **雪片数量上限**：最多同时 80 片，超过时优先移除最早的未点击雪片。  
+- **动画节流**：当页面隐藏时（Page Visibility API），暂停 RAF，避免后台消耗。  
+- **输入防抖**：用户提交承诺时，300ms 内不可重复提交，禁止空字符串或纯表情。  
+- **localStorage 降级**：若存储失败（隐私模式），仅内存存储，并静默提示一次。  
+- **移动端触摸**：将 `onClick` 同时绑定 `onTouchEnd`，保证雪片在手机上也敏感。  
+- **错误边界**：React Error Boundary 包裹雪片画布，出错时显示“雪暂时停了，刷新可继续”。
+
+---
+
+### [同舟共济]  
+**样式与审美（晴天的白与温柔）**  
+
+- **色盘**  
+  - 背景：从 `#FFF9E8`（黎明）到 `#FCE1B3`（正午）的线性渐变。  
+  - 雪片：`rgba(210, 225, 245, 0.9)`，外发光模糊 2px。  
+  - 点击卡片：磨砂玻璃效果（backdrop-filter: blur(8px)），边框 0.5px 纯白。  
+- **字体**：系统默认无衬线，但标题使用 `Georgia` 增加手写感。  
+- **动画**：雪片下落用 `cubic-bezier(0.33, 0, 0.66, 1)` 模拟轻微加速；卡片弹出时用 `scale(0.9)->1` 加弹簧曲线。  
+- **禁用过度特效**：用户若设置 `prefers-reduced-motion`，自动关闭所有动画，雪片瞬间闪现/消失。
+
+---
+
+### [逻辑学]  
+**构建与部署（一行命令起飞）**  
+
+```bash
+# 开发
+pnpm install
+pnpm dev
+
+# 测试
+pnpm test
+
+# 构建（输出 static 目录）
+pnpm build
+
+# 预览
+pnpm preview
+```
+
+**部署建议**  
+- 静态托管至 Vercel / Netlify / GitHub Pages（无需环境变量）。  
+- 在 `vite.config.ts` 中设置 `base: './'`，支持任意路径。  
+- 添加 `_headers` 文件（Netlify）启用缓存策略：  
+  ```
+  /assets/*
+    Cache-Control: public, max-age=31536000, immutable
+  ```
+
+---
+
+### [能工巧匠]  
+**AI Agent 实现要点（如何独立写出代码）**  
+
+1. **从 constants/phrases.ts 开始**  
+   - 硬编码 12 句来自原文的“至少”变体，以及 3 句用户互动示例（“至少我点击了这片雪”）。  
+
+2. **Canvas vs DOM**  
+   - 雪片用绝对定位的 `<div>` 数组实现，每片独立控制 `transform: translate(x%, y%) rotate(deg)`。  
+   - 性能比 Canvas 差，但更易处理点击事件与卡片覆盖。接受上限 80 片。  
+
+3. **Zustand 切片**  
+   - 创建 `useSnowStore`，暴露 `flakes`, `addFlake`, `removeFlake`, `updateFlake`。  
+   - 在 `useSnowfall` hook 中用 `setInterval` (30fps) 遍历 flakes 更新 y 值，触底调用 `removeFlake`。  
+
+4. **组件通信**  
+   - `SnowCanvas` 遍历 flakes 渲染每片雪，附带 `onClick`。  
+   - 点击时先调用 `updateFlake` 标记 clicked，再通过 portal 渲染卡片（避免定位混乱）。  
+   - `PromiseInput` 提交后调用 `addFlake`，并触发一次微振动（若支持 `navigator.vibrate`）。
+
+5. **测试覆盖**  
+   - 测试 `generateSnowflake` 不重复 ID。  
+   - 测试 store 中触底移除不报错。  
+   - 测试用户输入超过 10 字符时显示警告（不生成雪花）。
+
+---
+
+### [最后的朋友]  
+**启动时的诗**  
+
+当 AI Agent 读取完以上所有字段，它将在终端里执行 `npm create vite@latest`，然后在 `src` 下种下每一片代码。  
+最终，你会在浏览器里看见：  
+> 晴天的光晕下，雪片安静地坠落。  
+> 点击一片雪——它变成一张半透明的卡片，上面写着 **“至少我们还能看见这场雪。”**  
+> 右下角有一个小小的输入框：**“写下你今日最小的承诺”**。  
+> 没有后端，没有登录，没有分数。  
+> 只有雪，和晴天。
+
+---
+
+*文档结束。现在，让雪开始落下吧。*

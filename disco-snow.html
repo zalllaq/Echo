@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>雪落在晴天里 — 极乐迪斯科</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 16px; }
+
+  body {
+    background: #0a0a12;
+    color: #c8c4b8;
+    font-family: 'Georgia', 'Times New Roman', 'Noto Serif SC', serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ===== 天空渐变 + 极光 ===== */
+  #sky {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 140% 50% at 50% 100%, rgba(15, 25, 35, 0.9) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 15%, rgba(30, 45, 60, 0.3) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 20% 25%, rgba(45, 35, 25, 0.2) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 25% at 30% 20%, rgba(20, 55, 70, 0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 20% at 70% 35%, rgba(50, 30, 60, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 15% at 45% 10%, rgba(60, 70, 80, 0.04) 0%, transparent 50%),
+      linear-gradient(180deg, #0c0e1a 0%, #0f1422 20%, #121624 40%, #161a28 60%, #141822 80%, #101420 100%);
+  }
+  #sky::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(105deg,
+        transparent 0%, rgba(20, 70, 55, 0.025) 20%,
+        transparent 40%, rgba(60, 40, 80, 0.02) 60%,
+        transparent 75%, rgba(40, 60, 50, 0.015) 85%,
+        transparent 100%
+      );
+    background-size: 300% 100%;
+    animation: auroraDrift 35s ease-in-out infinite alternate;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  @keyframes auroraDrift {
+    0%   { background-position: 0% 0%; }
+    50%  { background-position: 100% 0%; }
+    100% { background-position: 50% 0%; }
+  }
+
+  /* ===== 体积光锥 ===== */
+  #light-cone {
+    position: fixed;
+    bottom: 38vh;
+    left: 68%;
+    z-index: 1;
+    width: 360px;
+    height: 38vh;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg,
+      rgba(220, 200, 150, 0.035) 0%,
+      rgba(220, 200, 150, 0.015) 40%,
+      rgba(200, 190, 170, 0.005) 70%,
+      transparent 100%
+    );
+    clip-path: polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
+    pointer-events: none;
+    animation: lightConePulse 5s ease-in-out infinite alternate;
+  }
+  @keyframes lightConePulse {
+    0%   { opacity: 0.25; }
+    100% { opacity: 0.65; }
+  }
+
+  /* ===== 地面雾气 ===== */
+  #fog {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 200%;
+    height: 14vh;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0%, rgba(200, 210, 220, 0.012) 10%,
+        transparent 25%, rgba(190, 200, 210, 0.008) 35%,
+        transparent 50%, rgba(210, 200, 220, 0.015) 60%,
+        transparent 75%, rgba(200, 210, 215, 0.01) 85%,
+        transparent 100%
+      );
+    mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.15) 20%, rgba(0,0,0,0.7) 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.15) 20%, rgba(0,0,0,0.7) 100%);
+    animation: fogDrift 40s linear infinite;
+  }
+  @keyframes fogDrift {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ===== 远景建筑层（虚化） ===== */
+  #cityscape-far {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 30vh;
+    z-index: 1;
+    pointer-events: none;
+    filter: blur(1.5px);
+    opacity: 0.35;
+  }
+
+  /* ===== 近景建筑群剪影 ===== */
+  #cityscape {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 38vh;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .building {
+    position: absolute;
+    bottom: 0;
+    background: #0f111d;
+    border-radius: 1px 1px 0 0;
+  }
+  .building::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(200, 190, 170, 0.03);
+  }
+  .window {
+    position: absolute;
+    width: 3px;
+    height: 4px;
+    background: rgba(180, 160, 100, 0.05);
+  }
+  .window.lit {
+    background: rgba(220, 180, 100, 0.10);
+    box-shadow: 0 0 6px rgba(220, 180, 100, 0.04);
+    animation: windowTwinkle 4s infinite alternate;
+  }
+  @keyframes windowTwinkle {
+    0%   { opacity: 0.4; box-shadow: 0 0 2px rgba(220, 180, 100, 0.02); }
+    30%  { opacity: 1;   box-shadow: 0 0 8px rgba(220, 180, 100, 0.06); }
+    70%  { opacity: 0.8; box-shadow: 0 0 6px rgba(220, 180, 100, 0.04); }
+    100% { opacity: 0.3; box-shadow: 0 0 2px rgba(220, 180, 100, 0.02); }
+  }
+  .chimney {
+    position: absolute;
+    bottom: 100%;
+    background: #0f111d;
+    width: 8px;
+    border-radius: 0;
+  }
+
+  /* ===== 路灯 ===== */
+  #lamppost {
+    position: fixed;
+    bottom: 38vh;
+    left: 68%;
+    z-index: 4;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+  #lamppost .pole {
+    width: 2px;
+    height: 130px;
+    background: linear-gradient(to top, rgba(40,40,50,0.6), rgba(60,60,70,0.3));
+    margin: 0 auto;
+  }
+  #lamppost .arm {
+    width: 30px;
+    height: 2px;
+    background: rgba(60,60,70,0.3);
+    margin-left: auto;
+    transform: rotate(-10deg);
+    transform-origin: right center;
+  }
+  #lamppost .light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(220, 200, 150, 0.06);
+    margin-left: auto;
+    margin-top: -1px;
+    margin-right: -2px;
+    box-shadow: 0 0 40px rgba(220, 200, 150, 0.04);
+  }
+  /* 多层光晕 */
+  #lamp-glow-inner {
+    position: fixed;
+    bottom: calc(38vh + 70px);
+    left: 68%;
+    z-index: 3;
+    width: 300px;
+    height: 350px;
+    transform: translate(-50%, 0);
+    background: radial-gradient(ellipse 30% 50% at 50% 0%, rgba(220, 200, 150, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+    animation: lampBreathe 3s ease-in-out infinite alternate;
+  }
+  #lamp-glow-outer {
+    position: fixed;
+    bottom: calc(38vh + 60px);
+    left: 68%;
+    z-index: 2;
+    width: 400px;
+    height: 450px;
+    transform: translate(-50%, 0);
+    background: radial-gradient(ellipse 35% 55% at 50% 0%, rgba(180, 170, 200, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+    animation: lampBreathe 4s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes lampBreathe {
+    0%   { opacity: 0.6; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 1;   transform: translate(-50%, 0) scale(1.06); }
+  }
+
+  /* ===== 人物剪影：欧洲女性背影 ===== */
+  #figure {
+    position: fixed;
+    bottom: clamp(30vh, 38vh, 42vh);
+    left: 50%;
+    z-index: 4;
+    pointer-events: auto;
+    cursor: pointer;
+    transform: translateX(-50%);
+    transition: opacity 0.3s;
+    animation: figureBreathe 4.2s ease-in-out infinite;
+  }
+  #figure:hover {
+    opacity: 0.8;
+  }
+  @keyframes figureBreathe {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-0.8px); }
+  }
+  /* 扩大点击区域 */
+  #figure::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    right: -12px;
+    bottom: -12px;
+    border-radius: 50%;
+  }
+  /* 边缘光（路灯照射） */
+  #figure .rim-light {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow:
+      inset 2px 0 4px rgba(220, 200, 150, 0.04),
+      inset -1px 0 2px rgba(220, 200, 150, 0.02);
+  }
+  #figure .head {
+    width: 16px;
+    height: 17px;
+    background: rgba(15, 17, 29, 0.88);
+    border-radius: 50%;
+    margin: 0 auto 1px;
+    position: relative;
+  }
+  #figure .bun {
+    position: absolute;
+    top: 3px;
+    right: -5px;
+    width: 7px;
+    height: 7px;
+    background: rgba(12, 14, 24, 0.9);
+    border-radius: 50%;
+  }
+  #figure .hair-strand {
+    position: absolute;
+    right: -2px;
+    top: 10px;
+    width: 2px;
+    height: 14px;
+    background: rgba(12, 14, 24, 0.7);
+    border-radius: 1px;
+    transform: rotate(4deg);
+  }
+  #figure .body {
+    width: 24px;
+    height: 52px;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 6px,
+        rgba(20, 22, 34, 0.15) 6px,
+        rgba(20, 22, 34, 0.15) 7px
+      ),
+      rgba(15, 17, 29, 0.88);
+    border-radius: 8px 8px 4px 4px;
+    margin: 0 auto;
+    position: relative;
+  }
+  #figure .coat-hem {
+    position: absolute;
+    bottom: -2px;
+    left: -3px;
+    width: 30px;
+    height: 8px;
+    background: rgba(15, 17, 29, 0.85);
+    border-radius: 2px 2px 6px 6px;
+  }
+  #figure .arm-left {
+    position: absolute;
+    top: 16px;
+    left: -6px;
+    width: 7px;
+    height: 24px;
+    background: rgba(15, 17, 29, 0.85);
+    border-radius: 4px 2px 6px 4px;
+    transform: rotate(8deg);
+  }
+  #figure .arm-right {
+    position: absolute;
+    top: 16px;
+    right: -6px;
+    width: 7px;
+    height: 24px;
+    background: rgba(15, 17, 29, 0.85);
+    border-radius: 2px 4px 4px 6px;
+    transform: rotate(-8deg);
+  }
+  #figure .collar {
+    position: absolute;
+    top: -1px;
+    left: -2px;
+    width: 28px;
+    height: 6px;
+    background: rgba(12, 14, 24, 0.7);
+    border-radius: 4px 4px 2px 2px;
+  }
+  #figure .boots {
+    position: absolute;
+    bottom: -6px;
+    left: 2px;
+    width: 8px;
+    height: 6px;
+    background: rgba(10, 12, 20, 0.9);
+    border-radius: 2px 2px 4px 4px;
+  }
+  #figure .boots-right {
+    position: absolute;
+    bottom: -6px;
+    right: 2px;
+    width: 8px;
+    height: 6px;
+    background: rgba(10, 12, 20, 0.9);
+    border-radius: 2px 2px 4px 4px;
+  }
+  #figure .scarf {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    width: 24px;
+    height: 4px;
+    background: rgba(20, 22, 34, 0.6);
+    border-radius: 2px;
+  }
+  #figure .scarf-tail {
+    position: absolute;
+    top: 18px;
+    right: -4px;
+    width: 3px;
+    height: 16px;
+    background: rgba(20, 22, 34, 0.5);
+    border-radius: 1px;
+    transform: rotate(6deg);
+  }
+  /* 肩上积雪 */
+  #figure .snow-cap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(ellipse 40% 8% at 50% 5%, rgba(210, 215, 225, 0.08) 0%, transparent 100%),
+      radial-gradient(ellipse 25% 5% at 25% 10%, rgba(210, 215, 225, 0.05) 0%, transparent 100%),
+      radial-gradient(ellipse 20% 4% at 75% 8%, rgba(210, 215, 225, 0.04) 0%, transparent 100%);
+  }
+
+  /* 远处人物 */
+  #figure-dist {
+    position: fixed;
+    bottom: 38vh;
+    left: 25%;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0.4;
+    transform: translateX(-50%) scale(0.6);
+  }
+  #figure-dist .body {
+    width: 16px;
+    height: 44px;
+    background: rgba(15, 17, 29, 0.7);
+    border-radius: 5px 5px 2px 2px;
+    margin: 0 auto;
+    position: relative;
+  }
+  #figure-dist .head {
+    width: 12px;
+    height: 14px;
+    background: rgba(15, 17, 29, 0.7);
+    border-radius: 50%;
+    margin: 0 auto 2px;
+  }
+
+  /* ===== 地面 ===== */
+  #ground {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5vh;
+    z-index: 3;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(200, 200, 210, 0.005) 0px,
+        rgba(200, 200, 210, 0.005) 1px,
+        transparent 1px,
+        transparent 3px
+      ),
+      linear-gradient(180deg, rgba(15, 17, 29, 0.9) 0%, rgba(10, 12, 22, 0.95) 100%);
+    pointer-events: none;
+  }
+  #ground-snow {
+    position: fixed;
+    bottom: 4vh;
+    left: 0;
+    width: 100%;
+    height: 2vh;
+    z-index: 3;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(200, 200, 210, 0.008) 0px,
+        transparent 2px
+      ),
+      linear-gradient(180deg, rgba(200, 200, 210, 0.02) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* ===== 雪花粒子容器 ===== */
+  #snow-container {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    overflow: hidden;
+    contain: layout style paint;
+  }
+  .snow-particle {
+    position: absolute;
+    top: -4px;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  .snow-particle.type-dot {
+    border-radius: 50%;
+    background: rgba(210, 215, 225, 0.7);
+  }
+  .snow-particle.type-hex {
+    width: 6px !important;
+    height: 6px !important;
+    background: rgba(210, 215, 225, 0.5);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+  .snow-particle.type-glow {
+    border-radius: 50%;
+    background: rgba(220, 215, 230, 0.3);
+    box-shadow: 0 0 6px 2px rgba(220, 215, 230, 0.1);
+  }
+  /* 在灯光区域的雪花会变亮 */
+  .snow-particle.in-light {
+    background: rgba(240, 225, 190, 0.7);
+    box-shadow: 0 0 8px 1px rgba(240, 225, 190, 0.15);
+  }
+  .snow-particle.type-hex.in-light {
+    background: rgba(240, 225, 190, 0.6);
+  }
+  .snow-particle.type-glow.in-light {
+    background: rgba(240, 225, 190, 0.4);
+    box-shadow: 0 0 12px 3px rgba(240, 225, 190, 0.2);
+  }
+  .snow-particle.has-blur {
+    filter: blur(0.4px);
+  }
+  /* 景深：近景大雪花 */
+  .snow-particle.type-blur {
+    border-radius: 50%;
+    filter: blur(1.8px);
+    opacity: 0.25;
+    will-change: transform, opacity;
+  }
+  .snow-particle.type-blur.in-light {
+    background: rgba(240, 225, 190, 0.3);
+    box-shadow: 0 0 12px 3px rgba(240, 225, 190, 0.12);
+  }
+
+  /* 字形粒子 */
+  .snow-char {
+    position: absolute;
+    top: -20px;
+    pointer-events: none;
+    font-family: 'Noto Serif SC', 'Georgia', serif;
+    will-change: transform, opacity;
+    text-shadow: 0 0 12px rgba(200, 200, 215, 0.08);
+  }
+
+  /* ===== 思想气泡 ===== */
+  .thought {
+    position: fixed;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: rgba(200, 196, 184, 0.75);
+    text-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    max-width: 320px;
+    letter-spacing: 0.02em;
+    transition: opacity 2.5s ease, transform 2.5s ease;
+    clip-path: polygon(
+      0% 0%, 96% 0%, 100% 4%,
+      100% 96%, 97% 100%, 3% 100%,
+      0% 97%, 0% 3%
+    );
+    background: rgba(15, 17, 25, 0.35);
+    padding: 14px 18px 16px;
+    border-radius: 2px 16px 2px 16px;
+  }
+  .thought::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 20px,
+        rgba(200, 196, 184, 0.01) 20px,
+        rgba(200, 196, 184, 0.01) 21px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 20px,
+        rgba(200, 196, 184, 0.008) 20px,
+        rgba(200, 196, 184, 0.008) 21px
+      );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  .thought.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .thought.fade {
+    opacity: 0;
+    transition: opacity 3s ease, transform 3s ease;
+    transform: translateY(6px);
+  }
+  .thought .thought-skill {
+    font-size: 0.5625rem;
+    letter-spacing: 0.12em;
+    color: rgba(160, 140, 100, 0.4);
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-style: italic;
+    margin-bottom: 4px;
+    display: inline-block;
+    transform: skewX(-8deg);
+  }
+  .thought .thought-skill.success {
+    color: rgba(200, 180, 120, 0.6);
+  }
+  .thought .thought-skill.fail {
+    color: rgba(180, 100, 90, 0.5);
+  }
+
+  /* ===== 烟雾粒子 ===== */
+  .smoke-particle {
+    position: fixed;
+    bottom: 38vh;
+    pointer-events: none;
+    z-index: 2;
+    width: 12px;
+    height: 6px;
+    background: rgba(180, 180, 190, 0.015);
+    border-radius: 50%;
+    will-change: transform, opacity;
+  }
+
+  /* ===== 技能检定 Toast ===== */
+  #check-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  #check-toast.show {
+    opacity: 1;
+  }
+  #check-toast .check-label {
+    font-size: 0.625rem;
+    letter-spacing: 0.15em;
+    color: rgba(160, 140, 100, 0.4);
+    font-family: 'Arial', sans-serif;
+    margin-bottom: 8px;
+  }
+  #check-toast .check-dice {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    transition: color 0.3s;
+  }
+  #check-toast .check-result {
+    font-size: 0.8125rem;
+    color: rgba(200, 196, 184, 0.4);
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    transform: skewX(-6deg);
+  }
+
+  /* ===== aria-live 无障碍区域 ===== */
+  #aria-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+  }
+
+  /* ===== 底部提示 ===== */
+  #hint {
+    position: fixed;
+    bottom: clamp(16px, 3vh, 28px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    color: rgba(200, 196, 184, 0.12);
+    font-size: 0.6875rem;
+    letter-spacing: 0.2em;
+    font-family: 'Arial', sans-serif;
+    pointer-events: none;
+    animation: pulse-hint 6s ease-in-out infinite;
+  }
+  @keyframes pulse-hint {
+    0%, 100% { opacity: 0.12; }
+    50%      { opacity: 0.35; }
+  }
+
+  @media (max-width: 600px) {
+    .thought { font-size: 0.75rem; max-width: 240px; padding: 10px 14px 12px; }
+    #lamppost { left: 80%; }
+    #lamppost .pole { height: 90px; }
+    #figure { left: 40%; }
+    #lamp-glow-inner { width: 200px; height: 250px; }
+    #lamp-glow-outer { width: 280px; height: 320px; }
+    #light-cone { width: 200px; left: 80%; }
+    #fog { height: 8vh; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .snow-particle, .snow-char, .smoke-particle { display: none; }
+    #figure { animation: none; }
+    #lamp-glow-inner, #lamp-glow-outer, #light-cone { animation: none; }
+    #hint { animation: none; }
+    .window.lit { animation: none; }
+    #sky::before { animation: none; opacity: 0.3; }
+    #fog { animation: none; opacity: 0.5; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sky"></div>
+<div id="cityscape-far"></div>
+<div id="cityscape"></div>
+<div id="lamp-glow-outer"></div>
+<div id="lamp-glow-inner"></div>
+<div id="light-cone"></div>
+
+<div id="lamppost">
+  <div class="light"></div>
+  <div class="arm"></div>
+  <div class="pole"></div>
+</div>
+
+<figure id="figure" role="button" tabindex="0" aria-label="路灯下的女性背影，点击与她对话">
+  <div class="rim-light"></div>
+  <div class="snow-cap"></div>
+  <div class="head">
+    <div class="bun"></div>
+    <div class="hair-strand"></div>
+  </div>
+  <div class="body">
+    <div class="collar"></div>
+    <div class="arm-left"></div>
+    <div class="arm-right"></div>
+    <div class="coat-hem"></div>
+    <div class="scarf"></div>
+    <div class="scarf-tail"></div>
+    <div class="boots"></div>
+    <div class="boots-right"></div>
+  </div>
+</figure>
+
+<div id="figure-dist">
+  <div class="head"></div>
+  <div class="body"></div>
+</div>
+
+<div id="ground-snow"></div>
+<div id="ground"></div>
+<div id="fog"></div>
+<div id="snow-container"></div>
+<div id="hint">✦ 点击那个人影 · 或只是看着雪 ✦</div>
+
+<div id="check-toast" role="status" aria-live="polite">
+  <div class="check-label">▼ 技能检定</div>
+  <div class="check-dice">🎲</div>
+  <div class="check-result"></div>
+</div>
+
+<div id="aria-live" aria-live="polite"></div>
+
+<script>
+// ============================================================
+//  语料池
+// ============================================================
+const SKILLS = [
+  '内陆帝国', '能说会道', '博学多闻', '通情达理',
+  '平心定气', '食髓知味', '同舟共济', '逻辑学',
+  '故土柔情', '眼明手巧', '标新立异', '能工巧匠',
+];
+
+const THOUGHTS = [
+  { text: '她站在雪里，像一句忘记收尾的话。', skill: '内陆帝国' },
+  { text: '路灯把影子拉得很长——长到可以踩到昨天。', skill: '故土柔情' },
+  { text: '你数了数口袋里的东西。什么都可以证明你来过。', skill: '眼明手巧' },
+  { text: '这座城市正在缓慢地忘记自己的名字。', skill: '博学多闻' },
+  { text: '你冷吗？不。冷的是这座城市记忆你的方式。', skill: '通情达理' },
+  { text: '她没有回头。大概每个背影都是一种回答。', skill: '能说会道' },
+  { text: '呼吸在空气里变成白雾，然后消失——像你没有说出的那句话。', skill: '平心定气' },
+  { text: '雪落在她的肩上，像时间在收集证据。', skill: '食髓知味' },
+  { text: '你想起一些不该想起的事。雪对此保持沉默。', skill: '内陆帝国' },
+  { text: '路灯下空无一人。但光还是亮着。', skill: '同舟共济' },
+  { text: '她往东走。你往西走。雪落在中间。', skill: '标新立异' },
+  { text: '有时候活着就是站在雪地里看一个陌生人的背影。', skill: '平心定气' },
+  { text: '你知道那不是她。但你希望那是。', skill: '通情达理' },
+  { text: '雪落在水面上，连涟漪都没有。你也是。', skill: '逻辑学' },
+  { text: '天空灰得像一封写了又撕掉的信。', skill: '故土柔情' },
+  { text: '你听到自己的脚步声。那是你今晚唯一确定的对话。', skill: '能工巧匠' },
+  { text: '有人在这个街角等过。烟头还躺在雪里。', skill: '食髓知味' },
+  { text: '世界不打烊。它只是把灯调暗了一点。', skill: '眼明手巧' },
+  { text: '你想告诉她什么。但雪把话都吞了。', skill: '能说会道' },
+  { text: '雪从不说谎。它只是覆盖。', skill: '逻辑学' },
+  { text: '她口袋里装着什么？你想问，但那是另一个人的故事了。', skill: '内陆帝国' },
+  { text: '远处有船笛声——低沉得像大地的叹息。', skill: '同舟共济' },
+  { text: '你站在这里，不过是在等待一个已经错过了的答案。', skill: '标新立异' },
+];
+
+const CHAR_FRAGMENTS = [
+  '雪', '夜', '空', '城', '风', '远', '静', '影',
+  '灯', '路', '灰', '白', '冷', '暖', '光', '尘',
+  '停', '落', '散', '寒', '旧', '薄', '淡', '轻',
+  '无', '独', '行', '归', '望', '默', '语', '寂',
+  '✦', '·', '…', '。', '—',
+];
+
+const SNOW_TYPES = ['dot', 'hex', 'glow', 'blur'];
+
+// 场景常量
+const LAMP_X = 68;  // 灯柱水平位置（视口百分比）
+const LAMP_Y = 38;  // 灯柱垂直位置（视口百分比）
+
+// 建筑数据（静态，避免每次 resize 重建对象）
+const BUILDINGS_FAR = [
+  [2,5,0.5],[8,4,0.6],[14,6,0.3],[22,3,0.7],[28,5,0.4],[36,4,0.55],
+  [44,6,0.35],[52,3,0.65],[58,5,0.45],[66,4,0.5],[74,6,0.35],[82,3,0.6],
+  [88,5,0.4],[94,4,0.5],
+];
+const BUILDINGS_NEAR = [
+  [0,6,0.5],[6,4,0.7],[10,8,0.4],[18,3,0.8],[21,5,0.55],[26,7,0.35],
+  [33,4,0.9],[37,6,0.6],[43,3,0.75],[46,8,0.4],[54,5,0.65],[59,4,0.85],
+  [63,7,0.45],[70,3,0.95],[73,5,0.55],[78,6,0.7],[84,4,0.5],[88,7,0.6],
+  [95,5,0.4],
+];
+
+// ============================================================
+//  工具
+// ============================================================
+const rand = (min, max) => Math.random() * (max - min) + min;
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const W = () => window.innerWidth;
+const H = () => window.innerHeight;
+const isMobile = () => W() < 600;
+
+// ============================================================
+//  风系统（基于叠加正弦波的自然阵风）
+// ============================================================
+function getWind(time) {
+  const gentle = Math.sin(time * 0.0004) * 0.3;
+  const gust = Math.sin(time * 0.0009) * 0.5 + Math.sin(time * 0.0018) * 0.2;
+  return gentle + gust;
+}
+
+// ============================================================
+//  建筑剪影
+// ============================================================
+function buildCityscape(containerId, isFar) {
+  const el = document.getElementById(containerId);
+  const w = W();
+  const h = isFar ? H() * 0.30 : H() * 0.38;
+
+  const buildings = isFar ? BUILDINGS_FAR : BUILDINGS_NEAR;
+
+  for (const [leftPct, widthPct, heightRatio] of buildings) {
+    const b = document.createElement('div');
+    b.className = 'building';
+    const bw = (widthPct / 100) * w;
+    const bh = h * heightRatio;
+    b.style.left = (leftPct / 100) * w + 'px';
+    b.style.width = bw + 'px';
+    b.style.height = bh + 'px';
+
+    if (!isFar) {
+      const cols = Math.floor(bw / 14);
+      const rows = Math.floor(bh / 18);
+      for (let r = 0; r < rows && r < 12; r++) {
+        for (let c = 0; c < cols && c < 8; c++) {
+          if (Math.random() > 0.4) continue;
+          const win = document.createElement('div');
+          win.className = 'window' + (Math.random() < 0.15 ? ' lit' : '');
+          win.style.left = (6 + c * 14) + 'px';
+          win.style.bottom = (6 + r * 18) + 'px';
+          win.style.animationDelay = rand(0, 4) + 's';
+          b.appendChild(win);
+        }
+      }
+
+      if (Math.random() < 0.3) {
+        const ch = document.createElement('div');
+        ch.className = 'chimney';
+        ch.style.left = rand(10, bw - 12) + 'px';
+        ch.style.height = rand(6, 16) + 'px';
+        b.appendChild(ch);
+      }
+    }
+
+    el.appendChild(b);
+  }
+
+  if (!isFar) {
+    const ruin = document.createElement('div');
+    ruin.style.position = 'absolute';
+    ruin.style.bottom = '0';
+    ruin.style.left = '0';
+    ruin.style.width = (7 / 100) * w + 'px';
+    ruin.style.height = h * 0.35 + 'px';
+    ruin.style.background = '#0c0e1a';
+    ruin.style.clipPath = 'polygon(0 100%, 0 40%, 30% 30%, 45% 50%, 60% 25%, 100% 35%, 100% 100%)';
+    ruin.style.opacity = '0.5';
+    el.appendChild(ruin);
+  }
+}
+
+// ============================================================
+//  烟雾系统
+// ============================================================
+let smokeParticles = [];
+
+function createSmoke() {
+  const el = document.createElement('div');
+  el.className = 'smoke-particle';
+  const l = rand(5, 35);
+  el.style.left = l + '%';
+  el.style.bottom = '38vh';
+  el.style.width = rand(10, 20) + 'px';
+  el.style.height = rand(4, 8) + 'px';
+  el.style.opacity = rand(0.01, 0.03);
+  document.body.appendChild(el);
+
+  const p = {
+    el,
+    x: l,
+    y: 0,
+    speed: rand(0.04, 0.12),
+    drift: rand(-3, 3),
+    life: 0,
+    maxLife: 600 + rand(0, 400),
+  };
+  smokeParticles.push(p);
+}
+
+function updateSmoke(step) {
+  // 控制总量
+  if (smokeParticles.length < 4 && Math.random() < 0.005 * step) {
+    createSmoke();
+  }
+  for (let i = smokeParticles.length - 1; i >= 0; i--) {
+    const p = smokeParticles[i];
+    p.y += p.speed * step;
+    p.x += p.drift * 0.01 * step;
+    p.life += step;
+    p.el.style.bottom = (38 + p.y) + 'vh';
+    p.el.style.transform = `translateX(${p.x}px)`;
+    const fade = Math.max(0, 1 - p.life / p.maxLife);
+    p.el.style.opacity = fade * 0.03;
+
+    if (p.life > p.maxLife || p.y > 25) {
+      if (p.el.parentNode) p.el.parentNode.removeChild(p.el);
+      smokeParticles.splice(i, 1);
+    }
+  }
+}
+
+// ============================================================
+//  雪花系统
+// ============================================================
+const snowContainer = document.getElementById('snow-container');
+
+let particles = [];
+let charParticles = [];
+let lastThought = null;
+
+function createSnowParticle() {
+  const type = pick(SNOW_TYPES);
+  const el = document.createElement('div');
+  el.className = `snow-particle type-${type}`;
+
+  if (type === 'dot') {
+    const size = rand(1, 3);
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.background = `rgba(210, 215, 225, ${rand(0.2, 0.6)})`;
+  } else if (type === 'hex') {
+    el.style.background = `rgba(210, 215, 225, ${rand(0.3, 0.5)})`;
+  } else if (type === 'blur') {
+    const size = rand(10, 18);
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.background = `rgba(210, 215, 225, ${rand(0.15, 0.35)})`;
+  } else {
+    el.style.width = rand(5, 10) + 'px';
+    el.style.height = el.style.width;
+  }
+
+  el.style.left = rand(0, 100) + '%';
+  let baseOpacity;
+  if (type === 'glow') baseOpacity = rand(0.2, 0.4);
+  else if (type === 'blur') baseOpacity = rand(0.12, 0.28);
+  else baseOpacity = rand(0.3, 0.7);
+  el.style.opacity = baseOpacity;
+
+  // 景深大雪花不额外加模糊（自带 CSS blur），其他高速粒子加运动模糊
+  let speed;
+  if (type === 'blur') { speed = rand(1.5, 3.0); }
+  else { speed = rand(0.2, 1.4); if (speed > 0.9) el.classList.add('has-blur'); }
+
+  snowContainer.appendChild(el);
+
+  const p = {
+    el,
+    type,
+    x: parseFloat(el.style.left),
+    y: -rand(0, 10),
+    speed,
+    baseOpacity,
+    driftAmp: type === 'blur' ? rand(2, 6) : type === 'glow' ? rand(5, 20) : rand(15, 50),
+    driftFreq: rand(0.005, 0.02),
+    phase: rand(0, Math.PI * 2),
+  };
+  particles.push(p);
+  return p;
+}
+
+function createCharParticle() {
+  const el = document.createElement('div');
+  el.className = 'snow-char';
+  el.textContent = pick(CHAR_FRAGMENTS);
+  el.style.left = rand(5, 95) + '%';
+  el.style.fontSize = rand(10, 16) + 'px';
+  const opacity = rand(0.04, 0.16);
+  el.style.opacity = opacity;
+  el.style.color = Math.random() < 0.2
+    ? `rgba(200, 190, 170, ${opacity})`
+    : `rgba(200, 200, 215, ${opacity})`;
+  el.style.textShadow = `0 0 ${rand(8, 20)}px rgba(200, 200, 215, ${opacity * 0.5})`;
+
+  snowContainer.appendChild(el);
+
+  const p = {
+    el,
+    x: parseFloat(el.style.left),
+    y: -rand(5, 30),
+    speed: rand(0.12, 0.35),
+    driftAmp: rand(20, 60),
+    driftFreq: rand(0.003, 0.012),
+    phase: rand(0, Math.PI * 2),
+    opacity,
+  };
+  charParticles.push(p);
+  return p;
+}
+
+function removeParticle(p, arr) {
+  p.el.style.transition = 'opacity 1s ease';
+  p.el.style.opacity = '0';
+  const idx = arr.indexOf(p);
+  if (idx !== -1) arr.splice(idx, 1);
+  setTimeout(() => {
+    if (p.el.parentNode) p.el.parentNode.removeChild(p.el);
+  }, 1000);
+}
+
+// ============================================================
+//  灯光区域检测
+// ============================================================
+function isInLight(x, y) {
+  const dx = x - LAMP_X;
+  const dy = y - LAMP_Y;
+  return (dx * dx) / (12 * 12) + (dy * dy) / (18 * 18) < 1;
+}
+
+// ============================================================
+//  思想气泡
+// ============================================================
+let activeThoughts = [];
+
+function fadeOutThought(el, delay = 0) {
+  setTimeout(() => {
+    el.classList.remove('show');
+    el.classList.add('fade');
+    setTimeout(() => {
+      const idx = activeThoughts.indexOf(el);
+      if (idx !== -1) activeThoughts.splice(idx, 1);
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 3000);
+  }, delay);
+}
+
+function showThought(text, skill, x, y, delay = 0, result = '') {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'thought';
+
+    const skillClass = result === 'success' ? 'success' : result === 'fail' ? 'fail' : '';
+    el.innerHTML = `<div class="thought-skill ${skillClass}">[${skill}]</div>${text}`;
+    el.style.left = Math.min(x, W() - 340) + 'px';
+    el.style.top = Math.min(y, H() - 200) + 'px';
+    el.style.left = Math.max(16, parseFloat(el.style.left)) + 'px';
+    el.style.top = Math.max(16, parseFloat(el.style.top)) + 'px';
+
+    // 初始水平偏移（漂移起点）
+    const driftBase = rand(-3, 3);
+    el.style.transform = `translateX(${driftBase}px)`;
+
+    document.body.appendChild(el);
+
+    requestAnimationFrame(() => {
+      el.classList.add('show');
+    });
+
+    const stay = 5000 + rand(0, 2000);
+    const fadeTimer = setTimeout(() => fadeOutThought(el), stay);
+    el._fadeTimer = fadeTimer;
+    activeThoughts.push(el);
+
+    while (activeThoughts.length > 6) {
+      const old = activeThoughts.shift();
+      if (old._fadeTimer) clearTimeout(old._fadeTimer);
+      fadeOutThought(old);
+    }
+  }, delay);
+}
+
+// ============================================================
+//  交互控制
+// ============================================================
+const figure = document.getElementById('figure');
+const toast = document.getElementById('check-toast');
+const toastDice = toast.querySelector('.check-dice');
+const toastResult = toast.querySelector('.check-result');
+const ariaLive = document.getElementById('aria-live');
+
+let conversationStep = 0;
+let figureCooldown = 0;
+let clickCooldown = 0;
+let spaceCooldown = 0;
+
+function showToast(dice, label, text, isSuccess) {
+  toastDice.textContent = `🎲 ${dice}`;
+  toastResult.textContent = text;
+  toastDice.style.color = isSuccess === true ? 'rgba(200, 180, 120, 0.7)' :
+    isSuccess === false ? 'rgba(180, 100, 90, 0.6)' : '';
+  toast.classList.add('show');
+  clearTimeout(toast._hide);
+  toast._hide = setTimeout(() => toast.classList.remove('show'), 1600);
+  ariaLive.textContent = `${label}: ${text}`;
+}
+
+function getFigureThoughts() {
+  if (conversationStep === 0) return {
+    thoughts: [
+      { text: '她站在路灯下，雪在她的帽檐上积了薄薄一层。你该说些什么——但所有开场白都像在背别人的台词。', skill: '通情达理' },
+      { text: '你认出那种站姿。一个人如果习惯了等待，就会站成这种角度。', skill: '内陆帝国' },
+      { text: '*为什么不说话？* 因为语言是一种税，而你今天已经破产了。', skill: '能说会道' },
+    ],
+    result: Math.random() < 0.5 ? 'success' : 'fail',
+  };
+  if (conversationStep === 1) return {
+    thoughts: [
+      { text: '她动了一下，但没有转身。也许她在等你先开口。也许她在等你离开。', skill: '通情达理' },
+      { text: '你想起某本书里的句子：*雪天的沉默不是空的——它装满了别人没有说完的话。*', skill: '博学多闻' },
+      { text: '你看着她呼出的白雾在空气里消散。每一口呼吸都在说：*我还在这里。*', skill: '平心定气' },
+    ],
+    result: Math.random() < 0.5 ? 'success' : 'fail',
+  };
+  return {
+    thoughts: [
+      { text: '雪落在你们之间的空地上。那距离不远，但你不知道它是不是可以跨越的。', skill: '故土柔情' },
+      { text: '也许她也在等一场雪停。也许每个人都在等。', skill: '同舟共济' },
+      { text: '*你最终什么也没有说。* 但雪替你说了——它落在你们身上，是一样的。', skill: '内陆帝国' },
+    ],
+    result: 'success',
+  };
+}
+
+function handleFigureClick() {
+  const now = Date.now();
+  if (now - figureCooldown < 1500) return;
+  figureCooldown = now;
+
+  const rect = figure.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top - 40;
+  const dice = Math.floor(rand(2, 6));
+  const success = dice >= 4;
+
+  const { thoughts, result } = getFigureThoughts();
+  showToast(dice, result === 'success' ? '内陆帝国' : '通情达理',
+    result === 'success' ? '她似乎注意到了你' : '她只是看着雪',
+    result === 'success');
+
+  conversationStep = Math.min(conversationStep + 1, 2);
+
+  thoughts.forEach((t, i) => {
+    showThought(t.text, t.skill, cx - 100 + i * 40, cy + 60 + i * 90, i * 1200, result);
+  });
+}
+
+function handleBlankClick(e) {
+  const now = Date.now();
+  if (now - clickCooldown < 800) return;
+  clickCooldown = now;
+  if (Math.random() < 0.15) return;
+
+  const thought = pick(THOUGHTS);
+  const x = e.clientX + rand(-30, 30);
+  const y = e.clientY + rand(-40, 10);
+  const dice = Math.floor(rand(1, 6));
+  const success = dice >= 3;
+
+  showToast(dice, thought.skill,
+    success ? '你注意到了什么' : '它转瞬即逝', success);
+  showThought(thought.text, thought.skill, x, y, 200);
+}
+
+// ============================================================
+//  事件绑定
+// ============================================================
+figure.addEventListener('click', handleFigureClick);
+figure.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    handleFigureClick();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#figure')) return;
+  if (e.target.closest('.thought')) return;
+  handleBlankClick(e);
+});
+
+// 触摸事件由 click 统一处理（浏览器已将 touch 合成 click）
+
+document.addEventListener('keydown', (e) => {
+  const now = Date.now();
+  if ((e.key === ' ' || e.key === 'Space') && e.target === document.body) {
+    e.preventDefault();
+    if (now - spaceCooldown < 500) return;
+    spaceCooldown = now;
+
+    let thought;
+    do {
+      thought = pick(THOUGHTS);
+    } while (THOUGHTS.length > 1 && thought === lastThought);
+    lastThought = thought;
+
+    const x = rand(60, W() - 340);
+    const y = rand(100, H() * 0.55);
+    showThought(thought.text, thought.skill, x, y, 0);
+    toastDice.textContent = '❄';
+    toastResult.textContent = `[${thought.skill}] 雪中回响`;
+    toast.classList.add('show');
+    clearTimeout(toast._hide);
+    toast._hide = setTimeout(() => toast.classList.remove('show'), 1000);
+    ariaLive.textContent = `雪中回响: ${thought.skill}`;
+  }
+  if (e.key === 'c' || e.key === 'C') {
+    for (const el of [...activeThoughts]) {
+      if (el._fadeTimer) clearTimeout(el._fadeTimer);
+      fadeOutThought(el);
+    }
+  }
+});
+
+// ============================================================
+//  visibility 管理
+// ============================================================
+let isVisible = true;
+document.addEventListener('visibilitychange', () => {
+  isVisible = !document.hidden;
+});
+
+// ============================================================
+//  动画循环
+// ============================================================
+let lastTime = 0;
+let startTime = performance.now();
+
+const MAX_PARTICLES = 120;
+const MAX_CHARS = 8;
+const MOBILE_MAX_PARTICLES = 60;
+const MOBILE_MAX_CHARS = 4;
+
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  if (!isVisible) {
+    lastTime = 0;
+    return;
+  }
+
+  const dt = lastTime ? Math.min(time - lastTime, 50) : 16;
+  lastTime = time;
+  const step = dt / 16;
+  const elapsed = (time - startTime) / 1000;
+  const mobile = isMobile();
+
+  const targetParticles = Math.min(mobile ? MOBILE_MAX_PARTICLES : MAX_PARTICLES,
+    (mobile ? 15 : 30) + Math.floor(elapsed * (mobile ? 2 : 4)));
+  const targetChars = Math.min(mobile ? MOBILE_MAX_CHARS : MAX_CHARS,
+    (mobile ? 1 : 2) + Math.floor(elapsed * (mobile ? 0.2 : 0.5)));
+
+  if (particles.length < targetParticles && Math.random() < (mobile ? 0.08 : 0.15) * step) {
+    createSnowParticle();
+  }
+  if (charParticles.length < targetChars && Math.random() < (mobile ? 0.01 : 0.02) * step) {
+    createCharParticle();
+  }
+
+  // 风对漂移的影响
+  const wind = getWind(time);
+
+  // 更新粒子
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.y += p.speed * step;
+    const personalDrift = Math.sin(time * p.driftFreq + p.phase) * p.driftAmp * 0.005 * step;
+    const windDrift = wind * step * (p.type === 'blur' ? 0.6 : 0.25);
+    const totalDrift = personalDrift + windDrift;
+
+    // GPU 加速: translate3d
+    p.el.style.transform = `translate3d(${totalDrift}px, 0, 0)`;
+    p.el.style.top = p.y + 'vh';
+
+    // 灯光区域检测
+    const inLight = isInLight(p.x + totalDrift / W() * 100, p.y);
+    p.el.classList.toggle('in-light', inLight);
+
+    if (p.y > 100) {
+      removeParticle(p, particles);
+    }
+  }
+
+  // 更新字形粒子
+  for (let i = charParticles.length - 1; i >= 0; i--) {
+    const p = charParticles[i];
+    p.y += p.speed * step;
+    const charDrift = Math.sin(time * p.driftFreq + p.phase + 1) * p.driftAmp * 0.006 * step;
+    const charWind = wind * step * 0.15;
+    const totalDrift = charDrift + charWind;
+    p.el.style.transform = `translate3d(${totalDrift}px, 0, 0)`;
+    p.el.style.top = p.y + 'vh';
+
+    if (p.y < 30) {
+      p.el.style.opacity = (p.y / 30) * p.opacity;
+    } else if (p.y > 70) {
+      p.el.style.opacity = (1 - (p.y - 70) / 30) * p.opacity;
+    } else {
+      p.el.style.opacity = p.opacity;
+    }
+
+    if (p.y > 98) {
+      removeParticle(p, charParticles);
+    }
+  }
+
+  // 烟雾
+  updateSmoke(step);
+}
+
+// ============================================================
+//  Resize（防抖 + 尺寸变化检测）
+// ============================================================
+let prevWidth = W();
+let prevHeight = H();
+let resizeTimer;
+
+function handleResize() {
+  const newW = W(), newH = H();
+  // 仅在尺寸显著变化时才重建
+  if (Math.abs(newW - prevWidth) < 20 && Math.abs(newH - prevHeight) < 20) return;
+  prevWidth = newW;
+  prevHeight = newH;
+
+  ['cityscape', 'cityscape-far'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.transition = 'opacity 1s ease';
+    el.style.opacity = '0';
+  });
+
+  requestAnimationFrame(() => {
+    ['cityscape', 'cityscape-far'].forEach(id => {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      buildCityscape(id, id === 'cityscape-far');
+      el.style.opacity = '1';
+    });
+  });
+}
+
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(handleResize, 300);
+});
+
+// ============================================================
+//  开场序列
+// ============================================================
+function intro() {
+  const introThoughts = [
+    { text: '雪落在晴天里。你站在这座叫不出名字的城市的边缘。', skill: '内陆帝国' },
+    { text: '远处有一个人影。她多久没有动过了？你多久没有动过了？', skill: '眼明手巧' },
+    { text: '某些事情已经结束。某种寒冷正在渗入。但你还站在这里——这意味着什么。', skill: '平心定气' },
+  ];
+
+  introThoughts.forEach((t, i) => {
+    showThought(t.text, t.skill, rand(60, 300), rand(120, 280), 800 + i * 2500);
+  });
+
+  setTimeout(() => {
+    toastDice.textContent = '❄';
+    toastResult.textContent = '[内陆帝国] 你感觉到了——今天不会是普通的一天';
+    toastDice.style.color = '';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+    ariaLive.textContent = '内陆帝国: 你感觉到了——今天不会是普通的一天';
+  }, 600);
+}
+
+// ============================================================
+//  启动
+// ============================================================
+buildCityscape('cityscape-far', true);
+buildCityscape('cityscape', false);
+intro();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

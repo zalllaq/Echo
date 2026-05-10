@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🍅 系统番茄钟 · 磁畴与节奏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f2f5 0%, #e0e5ec 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            padding: 24px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border-radius: 56px;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 560px;
+            padding: 2rem 1.8rem 1.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .stage-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 0.35rem 1.2rem;
+            border-radius: 60px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            margin-bottom: 1.2rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .timer {
+            font-size: 5rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            letter-spacing: 6px;
+            background: rgba(0, 0, 0, 0.02);
+            padding: 0.2rem 0;
+            border-radius: 48px;
+            text-align: center;
+            margin: 0.5rem 0 1rem;
+            color: #1e293b;
+        }
+
+        .progress-section {
+            margin: 1.2rem 0 1rem;
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #5b6e8c;
+            margin-bottom: 6px;
+        }
+        .progress-track {
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            transition: width 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            border-radius: 20px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 48px;
+            padding: 0.4rem 1rem;
+            margin: 1rem 0;
+            backdrop-filter: blur(4px);
+        }
+        .tomato-count {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #fff0e0;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #c2410c;
+            font-size: 0.9rem;
+        }
+        .energy-panel {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f1f5f9;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+        }
+        .energy-panel span {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        input[type="range"] {
+            width: 100px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: #cbd5e1;
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="range"]:focus {
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .message {
+            background: #f8fafc;
+            border-radius: 40px;
+            padding: 0.7rem 1rem;
+            font-size: 0.85rem;
+            color: #334155;
+            text-align: center;
+            margin: 0.8rem 0;
+            transition: all 0.2s;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 1.5rem 0 1rem;
+        }
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+        button {
+            border: none;
+            background: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.1s linear;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(2px);
+        }
+        button:active { transform: scale(0.96); }
+        .btn-start { background: #2ecc71; color: white; box-shadow: 0 4px 10px rgba(46,204,113,0.2); }
+        .btn-pause { background: #f39c12; color: white; }
+        .btn-reset { background: #3498db; color: white; }
+        .btn-next { background: #9b59b6; color: white; }
+        .btn-quick { background: #1abc9c; color: white; }
+
+        .advanced {
+            margin-top: 1.2rem;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            padding-top: 0.8rem;
+        }
+        .advanced-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #5b6e8c;
+            padding: 4px 0;
+        }
+        .advanced-content {
+            display: none;
+            margin-top: 1rem;
+            background: rgba(248, 250, 252, 0.8);
+            border-radius: 32px;
+            padding: 1rem;
+            font-size: 0.85rem;
+        }
+        .advanced-content.show {
+            display: block;
+        }
+
+        .rec-card {
+            background: #ffffffcc;
+            border-radius: 28px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 0.75rem;
+            color: #2c3e50;
+        }
+
+        .scale-row {
+            margin: 12px 0;
+        }
+        .timeline-box {
+            background: #f1f5f9;
+            border-radius: 28px;
+            padding: 10px;
+            font-size: 0.7rem;
+            font-family: monospace;
+            overflow-x: auto;
+            white-space: nowrap;
+            margin-top: 5px;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.2s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2ecc71;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.65rem;
+            color: #8ba0bc;
+            margin-top: 1rem;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 480px) {
+            .card { padding: 1.5rem; }
+            .timer { font-size: 3.8rem; letter-spacing: 2px; }
+            .button-row button { padding: 6px 14px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="stage-badge" id="stageLabel">
+        <span>🍅</span> 工作时间
+    </div>
+    <div class="timer" id="timerDisplay">25:00</div>
+    <div class="progress-section">
+        <div class="progress-label">
+            <span id="phaseHint">专注阶段</span>
+            <span id="percentHint">0%</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+    <div class="stats-row">
+        <div class="tomato-count">
+            <span>🍅</span> 完成 <strong id="pomodoroCount">0</strong>
+        </div>
+        <div class="energy-panel">
+            <span>💪 精力</span>
+            <input type="range" id="energySlider" min="1" max="5" value="3">
+            <span id="energyVal">3</span>
+        </div>
+    </div>
+    <div class="message" id="messageBox">✨ 点击「开始」专注工作 · 系统已就绪</div>
+
+    <div class="button-group">
+        <div class="button-row">
+            <button class="btn-start" id="startBtn">▶ 开始</button>
+            <button class="btn-pause" id="pauseBtn">⏸ 暂停</button>
+            <button class="btn-reset" id="resetBtn">🔄 重置</button>
+        </div>
+        <div class="button-row">
+            <button class="btn-next" id="nextBtn">⏩ 下一阶段</button>
+            <button class="btn-quick" id="quickStartBtn">⚡ 极速启动</button>
+        </div>
+    </div>
+
+    <div class="advanced">
+        <div class="advanced-header" id="advancedToggle">
+            <span>⚙️ 系统增强 · 磁畴/缓冲/尺度</span>
+            <span>▼</span>
+        </div>
+        <div class="advanced-content" id="advancedContent">
+            <div class="toggle-row">
+                <span>🌤️ 能量匹配推荐</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="energyMatchToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div id="energyRecommendMsg" class="rec-card"></div>
+            <div class="toggle-row">
+                <span>🚪 磁畴入口确认框</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="interventionToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="scale-row">
+                <div style="font-weight:500; margin-bottom:5px;">📊 中观时间轴 (未来3小时)</div>
+                <div class="timeline-box" id="timelinePreview">加载中...</div>
+            </div>
+            <div style="font-size:0.7rem; color:#5b6e8c; text-align:center; margin-top:8px;">
+                🧘 缓冲2min · 启动5min · 尊重节奏
+            </div>
+        </div>
+    </div>
+    <footer>🍃 系统番茄 · 干预节点 · 信任过程</footer>
+</div>
+
+<script>
+    // ---------- 系统参数 ----------
+    const WORK_TIME = 25 * 60;
+    const BREAK_TIME = 5 * 60;
+    const BUFFER_TIME = 2 * 60;
+    const STARTUP_TIME = 5 * 60;
+
+    let isWork = true;
+    let subPhase = "main";
+    let isRunning = false;
+    let remainingSeconds = WORK_TIME;
+    let pomodoroCount = 0;
+    let animationId = null;          // requestAnimationFrame ID
+    let lastTimestamp = null;        // 上次动画帧的真实时间戳（毫秒）
+
+    let energyMatchEnabled = true;
+    let interventionEnabled = true;
+
+    const stageLabel = document.getElementById('stageLabel');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const progressFill = document.getElementById('progressFill');
+    const phaseHint = document.getElementById('phaseHint');
+    const percentHint = document.getElementById('percentHint');
+    const pomodoroCountSpan = document.getElementById('pomodoroCount');
+    const messageBox = document.getElementById('messageBox');
+    const energySlider = document.getElementById('energySlider');
+    const energyVal = document.getElementById('energyVal');
+    const quickStartBtn = document.getElementById('quickStartBtn');
+
+    // ---------- 辅助函数 ----------
+    function formatTime(sec) {
+        let mins = Math.floor(sec / 60);
+        let s = sec % 60;
+        return `${mins.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    function getTotalByPhase() {
+        if (isWork && subPhase === "main") return WORK_TIME;
+        if (!isWork && subPhase === "main") return BREAK_TIME;
+        if (subPhase === "buffer") return BUFFER_TIME;
+        if (subPhase === "startup") return STARTUP_TIME;
+        return WORK_TIME;
+    }
+
+    function updateUI() {
+        timerDisplay.textContent = formatTime(remainingSeconds);
+        let total = getTotalByPhase();
+        let percent = (remainingSeconds / total) * 100;
+        progressFill.style.width = `${percent}%`;
+        percentHint.textContent = `${Math.floor(percent)}%`;
+
+        if (subPhase === "buffer") {
+            progressFill.style.backgroundColor = "#94a3b8";
+            phaseHint.textContent = "过渡缓冲 · 整理记录";
+        } else if (subPhase === "startup") {
+            progressFill.style.backgroundColor = "#6366f1";
+            phaseHint.textContent = "启动时间 · 极小任务";
+        } else if (isWork) {
+            progressFill.style.backgroundColor = "#e74c3c";
+            phaseHint.textContent = "专注工作 · 磁畴内部";
+        } else {
+            progressFill.style.backgroundColor = "#2ecc71";
+            phaseHint.textContent = "休息放松 · 恢复能量";
+        }
+
+        if (subPhase === "buffer") stageLabel.innerHTML = `<span>🧹</span> 过渡缓冲`;
+        else if (subPhase === "startup") stageLabel.innerHTML = `<span>🚀</span> 启动时间`;
+        else if (isWork) stageLabel.innerHTML = `<span>🍅</span> 工作时间`;
+        else stageLabel.innerHTML = `<span>☕</span> 休息时间`;
+    }
+
+    function showMessage(msg, isError = false, autoClear = true) {
+        messageBox.textContent = msg;
+        messageBox.style.background = isError ? "#ffe9e6" : "#e9f7ef";
+        messageBox.style.color = isError ? "#c2410c" : "#2c3e50";
+        if (autoClear) {
+            setTimeout(() => {
+                if (messageBox.textContent === msg) {
+                    messageBox.textContent = "🍃 专注当下，干预节点";
+                    messageBox.style.background = "#f8fafc";
+                    messageBox.style.color = "#334155";
+                }
+            }, 2500);
+        }
+    }
+
+    function stopTimer() {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        isRunning = false;
+        lastTimestamp = null;
+    }
+
+    // 基于 requestAnimationFrame 的时间差计时（解决后台标签页节流问题）
+    function startCountdown() {
+        if (animationId) return;
+        isRunning = true;
+        lastTimestamp = performance.now();
+
+        function tick(now) {
+            if (!isRunning) return;
+
+            if (lastTimestamp !== null) {
+                const elapsedMs = now - lastTimestamp;
+                if (elapsedMs >= 1000) {
+                    const elapsedSec = Math.floor(elapsedMs / 1000);
+                    if (elapsedSec > 0) {
+                        remainingSeconds = Math.max(0, remainingSeconds - elapsedSec);
+                        updateUI();
+                        lastTimestamp = now - (elapsedMs % 1000); // 保留不足一秒的余量
+
+                        if (remainingSeconds <= 0) {
+                            // 时间到，停止计时并处理阶段切换
+                            cancelAnimationFrame(animationId);
+                            animationId = null;
+                            isRunning = false;
+                            lastTimestamp = null;
+                            handlePhaseEnd();
+                            return;
+                        }
+                    } else {
+                        lastTimestamp = now;
+                    }
+                }
+            } else {
+                lastTimestamp = now;
+            }
+
+            // 继续下一帧
+            animationId = requestAnimationFrame(tick);
+        }
+
+        animationId = requestAnimationFrame(tick);
+    }
+
+    function handlePhaseEnd() {
+        // 提示音（静默失败）
+        try { new Audio('data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==').play().catch(e=>{}); } catch(e) {}
+        if (navigator.vibrate) navigator.vibrate(80);
+
+        if (subPhase === "main" && isWork) {
+            pomodoroCount++;
+            pomodoroCountSpan.textContent = pomodoroCount;
+            showMessage("🎉 工作完成！进入2分钟过渡缓冲 (整理/记录)");
+            subPhase = "buffer";
+            remainingSeconds = BUFFER_TIME;
+            updateUI();
+            startCountdown();
+        } 
+        else if (subPhase === "buffer") {
+            isWork = false;
+            subPhase = "main";
+            remainingSeconds = BREAK_TIME;
+            updateUI();
+            showMessage("🍃 休息时间，放松5分钟");
+            startCountdown();
+        }
+        else if (subPhase === "main" && !isWork) {
+            subPhase = "startup";
+            remainingSeconds = STARTUP_TIME;
+            updateUI();
+            showMessage("🌱 启动时间: 极小任务，然后进入工作");
+            startCountdown();
+        }
+        else if (subPhase === "startup") {
+            isWork = true;
+            subPhase = "main";
+            remainingSeconds = WORK_TIME;
+            updateUI();
+            showMessage("🍅 启动完成，专注工作25分钟");
+            startCountdown();
+        }
+    }
+
+    function resetCurrent() {
+        stopTimer();
+        if (isWork) { subPhase = "main"; remainingSeconds = WORK_TIME; }
+        else { subPhase = "main"; remainingSeconds = BREAK_TIME; }
+        updateUI();
+        showMessage("🔄 已重置当前阶段", false, true);
+    }
+
+    function manualNext() {
+        stopTimer();
+        if (subPhase === "buffer") {
+            isWork = false;
+            subPhase = "main";
+            remainingSeconds = BREAK_TIME;
+        } else if (subPhase === "startup") {
+            isWork = true;
+            subPhase = "main";
+            remainingSeconds = WORK_TIME;
+        } else if (isWork) {
+            subPhase = "buffer";
+            remainingSeconds = BUFFER_TIME;
+        } else {
+            subPhase = "startup";
+            remainingSeconds = STARTUP_TIME;
+        }
+        updateUI();
+        showMessage("⏩ 手动切换阶段", false, true);
+        startCountdown();
+    }
+
+    function quickStart() {
+        if (isRunning) stopTimer();
+        isWork = true;
+        subPhase = "startup";
+        remainingSeconds = STARTUP_TIME;
+        updateUI();
+        showMessage("⚡ 极速启动: 5分钟启动时间", false);
+        startCountdown();
+    }
+
+    function getEnergyRecommendation() {
+        if (!energyMatchEnabled) return "";
+        const hour = new Date().getHours();
+        if (hour >= 6 && hour <= 10) return "🌞 早晨高能期 · 推荐深度工作模式 (50/10)";
+        if (hour >= 13 && hour <= 15) return "😴 午后低能期 · 推荐轻量模式 (20/5)";
+        if (hour >= 19 && hour <= 22) return "🌙 晚间创作期 · 推荐中等模式 (30/8)";
+        return "✨ 常规时段，按标准节奏进行";
+    }
+
+    function highRiskCheck() {
+        const hour = new Date().getHours();
+        const energy = parseInt(energySlider.value);
+        if (hour >= 23 || energy <= 2 || pomodoroCount >= 8) return true;
+        return false;
+    }
+
+    async function preStartIntervention() {
+        if (!interventionEnabled) return true;
+        if (highRiskCheck()) {
+            const confirmHigh = confirm("⚠️ 不可逃逸区入口风险 (深夜/精力低/番茄多)\n建议改为启动5分钟微任务，确定要继续工作吗？");
+            if (!confirmHigh) {
+                enterStartupPhase(true);
+                return false;
+            }
+        }
+        const userConfirmed = confirm("🚪 准备进入工作磁畴。接下来25分钟不切换任务，确定开始吗？");
+        return userConfirmed;
+    }
+
+    function enterStartupPhase(manualFromRisk = false) {
+        stopTimer();
+        isWork = true;
+        subPhase = "startup";
+        remainingSeconds = STARTUP_TIME;
+        updateUI();
+        if (!manualFromRisk) showMessage("⏳ 启动时间: 做一件极小的事 (读一页/写一行)", false);
+        startCountdown();
+    }
+
+    function updateTimeline() {
+        const hour = new Date().getHours();
+        let preview = '';
+        for (let i = 0; i < 3; i++) {
+            let blockHour = (hour + i) % 24;
+            preview += `${blockHour}:00 → [工作25' 缓冲2' 休息5' 启动5']  `;
+            if (i < 2) preview += '   ';
+        }
+        document.getElementById('timelinePreview').innerHTML = preview;
+    }
+
+    function bindEvents() {
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            if (isRunning) return;
+            if (!await preStartIntervention()) return;
+            if (remainingSeconds <= 0) resetCurrent();
+            startCountdown();
+        });
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (isRunning) stopTimer();
+            else showMessage("计时器已暂停", false, true);
+        });
+        document.getElementById('resetBtn').addEventListener('click', resetCurrent);
+        document.getElementById('nextBtn').addEventListener('click', manualNext);
+        quickStartBtn.addEventListener('click', quickStart);
+
+        energySlider.addEventListener('input', () => {
+            energyVal.textContent = energySlider.value;
+            if (energyMatchEnabled) {
+                document.getElementById('energyRecommendMsg').innerHTML = getEnergyRecommendation();
+            }
+        });
+        document.getElementById('energyMatchToggle').addEventListener('change', (e) => {
+            energyMatchEnabled = e.target.checked;
+            if (energyMatchEnabled) document.getElementById('energyRecommendMsg').innerHTML = getEnergyRecommendation();
+            else document.getElementById('energyRecommendMsg').innerHTML = '';
+        });
+        document.getElementById('interventionToggle').addEventListener('change', (e) => interventionEnabled = e.target.checked);
+    }
+
+    document.getElementById('advancedToggle').addEventListener('click', () => {
+        document.getElementById('advancedContent').classList.toggle('show');
+    });
+
+    setInterval(() => {
+        updateTimeline();
+    }, 60000);
+    updateTimeline();
+    bindEvents();
+    updateUI();
+    if (energyMatchEnabled) document.getElementById('energyRecommendMsg').innerHTML = getEnergyRecommendation();
+    showMessage("🍅 系统番茄就绪 | 缓冲·启动·磁畴已集成 | 计时精确", false);
+</script>
+</body>
+</html>
